@@ -175,7 +175,20 @@ namespace OpenGraph_Net.Tests
         [Test]
         public async void ParseUrl_AmazonUrl_Test()
         {
-            OpenGraph graph = await OpenGraph.ParseUrl("http://www.amazon.com/Spaced-Complete-Simon-Pegg/dp/B0019MFY3Q");
+            OpenGraph graph = OpenGraph.ParseUrl("http://www.amazon.com/Spaced-Complete-Simon-Pegg/dp/B0019MFY3Q");
+
+            Assert.AreEqual("http://www.amazon.com/dp/B0019MFY3Q/ref=tsm_1_fb_lk", graph.Url.ToString());
+            Assert.AreEqual("Spaced: The Complete Series", graph.Title);
+            Assert.IsTrue(graph["description"].Contains("Spaced"));
+            Assert.AreEqual("http://ecx.images-amazon.com/images/I/51sWMo4CBcL._SS500_.jpg", graph.Image.ToString());
+            Assert.AreEqual("movie", graph.Type);
+            Assert.AreEqual("Amazon.com", graph["site_name"]);
+        }
+
+        [Test]
+        public async void ParseUrl_AmazonUrl_Test_Async()
+        {
+            OpenGraph graph = await OpenGraph.ParseUrlAsync("http://www.amazon.com/Spaced-Complete-Simon-Pegg/dp/B0019MFY3Q");
 
             Assert.AreEqual("http://www.amazon.com/dp/B0019MFY3Q/ref=tsm_1_fb_lk", graph.Url.ToString());
             Assert.AreEqual("Spaced: The Complete Series", graph.Title);

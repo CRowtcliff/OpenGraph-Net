@@ -67,25 +67,25 @@ namespace OpenGraph_Net
         /// The local alternatives
         /// </summary>
         private IList<string> localAlternatives;
-        
+
         /// <summary>
         /// Gets the type.
         /// </summary>
         /// <value>The type of open graph document.</value>
         public string Type { get; private set; }
-        
+
         /// <summary>
         /// Gets the title of the open graph document.
         /// </summary>
         /// <value>The title.</value>
         public string Title { get; private set; }
-        
+
         /// <summary>
         /// Gets the image for the open graph document.
         /// </summary>
         /// <value>The image.</value>
         public Uri Image { get; private set; }
-        
+
         /// <summary>
         /// Gets the URL for the open graph document
         /// </summary>
@@ -123,23 +123,23 @@ namespace OpenGraph_Net
         /// <param name="determiner">The determiner.</param>
         /// <returns><see cref="OpenGraph"/></returns>
         public static OpenGraph MakeGraph(
-            string title, 
-            string type, 
-            string image, 
-            string url, 
-            string description = "", 
-            string siteName = "", 
-            string audio = "", 
-            string video = "", 
-            string locale = "", 
-            IList<string> localeAlternate = null, 
+            string title,
+            string type,
+            string image,
+            string url,
+            string description = "",
+            string siteName = "",
+            string audio = "",
+            string video = "",
+            string locale = "",
+            IList<string> localeAlternate = null,
             string determiner = "")
         {
             var graph = new OpenGraph
             {
                 Title = title,
                 Type = type,
-                Image = new Uri(image,  UriKind.Absolute),
+                Image = new Uri(image, UriKind.Absolute),
                 Url = new Uri(url, UriKind.Absolute)
             };
 
@@ -216,6 +216,21 @@ namespace OpenGraph_Net
         }
 
         /// <summary>
+        /// Asynchronously downloads the HTML of the specified URL and parses it for open graph content.
+        /// </summary>
+        /// <param name="url">The URL to download the HTML from.</param>
+        /// <param name="userAgent">The user agent to use when downloading content.  The default is <c>"facebookexternalhit"</c> which is required for some site (like amazon) to include open graph data.</param>
+        /// <param name="validateSpecifiction">if set to <c>true</c> <see cref="OpenGraph"/> will validate against the specification.</param>
+        /// <returns>
+        ///   <see cref="OpenGraph" />
+        /// </returns>
+        public async static Task<OpenGraph> ParseUrlAsync(string url, string userAgent = "facebookexternalhit", bool validateSpecifiction = false)
+        {
+            Uri uri = new Uri(url);
+            return await ParseUrlAsync(uri, userAgent, validateSpecifiction);
+        }
+
+        /// <summary>
         /// Downloads the HTML of the specified URL and parses it for open graph content.
         /// </summary>
         /// <param name="url">The URL to download the HTML from.</param>
@@ -224,10 +239,11 @@ namespace OpenGraph_Net
         /// <returns>
         ///   <see cref="OpenGraph" />
         /// </returns>
-        public async static Task<OpenGraph> ParseUrl(string url, string userAgent = "facebookexternalhit", bool validateSpecifiction = false)
+
+        public static OpenGraph ParseUrl(string url, string userAgent = "facebookexternalhit", bool validateSpecifiction = false)
         {
             Uri uri = new Uri(url);
-            return await ParseUrl(uri, userAgent, validateSpecifiction);
+            return ParseUrl(uri, userAgent, validateSpecifiction);
         }
 
         /// <summary>
@@ -237,7 +253,7 @@ namespace OpenGraph_Net
         /// <param name="userAgent">The user agent to use when downloading content.  The default is <c>"facebookexternalhit"</c> which is required for some site (like amazon) to include open graph data.</param>
         /// <param name="validateSpecification">if set to <c>true</c> verify that the document meets the required attributes of the open graph specification.</param>
         /// <returns><see cref="OpenGraph"/></returns>
-        public async static Task<OpenGraph> ParseUrl(Uri url, string userAgent = "facebookexternalhit", bool validateSpecification = false)
+        public async static Task<OpenGraph> ParseUrlAsync(Uri url, string userAgent = "facebookexternalhit", bool validateSpecification = false)
         {
             OpenGraph result = new OpenGraph();
 
@@ -245,8 +261,35 @@ namespace OpenGraph_Net
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             request.UserAgent = userAgent;
 
-            HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();;
-          
+            HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync(); ;
+
+            string html = string.Empty;
+            using (StreamReader reader = new StreamReader(response.GetResponseStream()))
+            {
+                html = reader.ReadToEnd();
+            }
+
+            return ParseHtml(result, html, validateSpecification);
+        }
+
+
+        /// <summary>
+        /// Downloads the HTML of the specified URL and parses it for open graph content.
+        /// </summary>
+        /// <param name="url">The URL to download the HTML from.</param>
+        /// <param name="userAgent">The user agent to use when downloading content.  The default is <c>"facebookexternalhit"</c> which is required for some site (like amazon) to include open graph data.</param>
+        /// <param name="validateSpecification">if set to <c>true</c> verify that the document meets the required attributes of the open graph specification.</param>
+        /// <returns><see cref="OpenGraph"/></returns>
+        public static OpenGraph ParseUrl(Uri url, string userAgent = "facebookexternalhit", bool validateSpecification = false)
+        {
+            OpenGraph result = new OpenGraph();
+
+            result.OriginalUrl = url;
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.UserAgent = userAgent;
+
+            HttpWebResponse response = (HttpWebResponse)request.GetResponse(); ;
+
             string html = string.Empty;
             using (StreamReader reader = new StreamReader(response.GetResponseStream()))
             {
@@ -285,13 +328,13 @@ namespace OpenGraph_Net
 
             HtmlDocument document = new HtmlDocument();
             document.LoadHtml(toParse);
-            
+
             HtmlNodeCollection allMeta = document.DocumentNode.SelectNodes("//meta");
 
             var openGraphMetaTags = from meta in allMeta ?? new HtmlNodeCollection(null)
-                             where (meta.Attributes.Contains("property") && meta.Attributes["property"].Value.StartsWith("og:")) ||
-                             (meta.Attributes.Contains("name") && meta.Attributes["name"].Value.StartsWith("og:"))
-                             select meta;
+                                    where (meta.Attributes.Contains("property") && meta.Attributes["property"].Value.StartsWith("og:")) ||
+                                    (meta.Attributes.Contains("name") && meta.Attributes["name"].Value.StartsWith("og:"))
+                                    select meta;
 
             foreach (HtmlNode metaTag in openGraphMetaTags)
             {
@@ -494,7 +537,7 @@ namespace OpenGraph_Net
         }
 
         #endregion
-        
+
         #region ICollection<KeyValuePair<string,string>> Members
 
         /// <summary>
@@ -595,6 +638,6 @@ namespace OpenGraph_Net
             return ((System.Collections.IEnumerable)this.openGraphData).GetEnumerator();
         }
 
-        #endregion     
+        #endregion
     }
 }
